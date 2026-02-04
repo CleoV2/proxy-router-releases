@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Router Software</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            color: #00d9ff;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .stat-card .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #00d9ff;
+        }
+        .stat-card.connected .value {
+            color: #00ff88;
+        }
+        .stat-card.disconnected .value {
+            color: #ff6b6b;
+        }
+        .devices-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .devices-section h2 {
+            margin-bottom: 20px;
+            color: #00d9ff;
+            font-size: 1.3rem;
+        }
+        .device-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .device-table th,
+        .device-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .device-table th {
+            background: rgba(0, 217, 255, 0.1);
+            color: #00d9ff;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+        .device-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .status-badge.connected {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+        .status-badge.disconnected {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+        .btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .btn-danger {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+        }
+        .btn-danger:hover {
+            background: #ff6b6b;
+            color: #fff;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .refresh-btn {
+            background: rgba(0, 217, 255, 0.2);
+            color: #00d9ff;
+            border: 1px solid #00d9ff;
+            margin-bottom: 20px;
+        }
+        .refresh-btn:hover {
+            background: #00d9ff;
+            color: #1a1a2e;
+        }
+        .no-devices {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        .proxy-info {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        .last-updated {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+        @media (max-width: 768px) {
+            .device-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Admin Dashboard</h1>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Devices</h3>
+                <div class="value" id="total-devices">-</div>
+            </div>
+            <div class="stat-card connected">
+                <h3>Connected</h3>
+                <div class="value" id="connected-devices">-</div>
+            </div>
+            <div class="stat-card disconnected">
+                <h3>Disconnected</h3>
+                <div class="value" id="disconnected-devices">-</div>
+            </div>
+        </div>
+
+        <div class="devices-section">
+            <button class="btn refresh-btn" onclick="loadDevices()">Refresh</button>
+            <h2>Registered Devices</h2>
+            <div id="devices-container">
+                <p class="no-devices">Loading...</p>
+            </div>
+        </div>
+
+        <p class="last-updated">Last updated: <span id="last-updated">-</span></p>
+    </div>
+
+    <script>
+        async function loadDevices() {
+            try {
+                const response = await fetch('/admin/api/devices');
+                const data = await response.json();
+                
+                document.getElementById('total-devices').textContent = data.total_devices || 0;
+                document.getElementById('connected-devices').textContent = data.connected_devices || 0;
+                document.getElementById('disconnected-devices').textContent = (data.total_devices - data.connected_devices) || 0;
+                
+                const container = document.getElementById('devices-container');
+                
+                if (!data.devices || data.devices.length === 0) {
+                    container.innerHTML = '<p class="no-devices">No devices registered yet</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table class="device-table">
+                        <thead>
+                            <tr>
+                                <th>IP Address</th>
+                                <th>MAC Address</th>
+                                <th>Status</th>
+                                <th>Proxy</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                for (const device of data.devices) {
+                    const statusClass = device.is_connected ? 'connected' : 'disconnected';
+                    const statusText = device.is_connected ? 'Connected' : 'Disconnected';
+                    const proxyInfo = device.is_connected && device.proxy_host 
+                        ? `${device.proxy_host}:${device.proxy_port}` 
+                        : '-';
+                    const updatedAt = new Date(device.updated_at).toLocaleString();
+                    
+                    html += `
+                        <tr>
+                            <td>${device.ip_address || '-'}</td>
+                            <td>${device.mac_address}</td>
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td class="proxy-info">${proxyInfo}</td>
+                            <td>${updatedAt}</td>
+                            <td>
+                                ${device.is_connected ? 
+                                    `<button class="btn btn-danger" onclick="disconnectDevice('${device.ip_address}')">Disconnect</button>` : 
+                                    '-'}
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                
+                document.getElementById('last-updated').textContent = new Date().toLocaleString();
+                
+            } catch (error) {
+                console.error('Error loading devices:', error);
+                document.getElementById('devices-container').innerHTML = 
+                    '<p class="no-devices">Error loading devices</p>';
+            }
+        }
+        
+        async function disconnectDevice(ip) {
+            if (!confirm(`Disconnect device ${ip}?`)) return;
+            
+            try {
+                const response = await fetch(`/admin/api/devices/${ip}/disconnect`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    loadDevices();
+                } else {
+                    alert('Failed to disconnect: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error disconnecting device:', error);
+                alert('Error disconnecting device');
+            }
+        }
+        
+        // Load devices on page load
+        loadDevices();
+        
+        // Auto-refresh every 10 seconds
+        setInterval(loadDevices, 10000);
+    </script>
+</body>
+</html>

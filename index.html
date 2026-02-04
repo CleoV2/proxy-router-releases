@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Router</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            padding: 8px 0;
+        }
+
+        .status-row:not(:last-child) {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-label {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .status-value {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 13px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.connected {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .status-badge.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 15px;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 100px;
+            gap: 12px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(239, 68, 68, 0.5);
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message.success {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .optional-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .optional-title {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Proxy Router</h1>
+        <p class="subtitle">Configure your SOCKS5 proxy to access the internet</p>
+
+        <div class="status-card">
+            <div class="status-row">
+                <span class="status-label">Device IP</span>
+                <span class="status-value" id="device-ip">Loading...</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">MAC Address</span>
+                <span class="status-value" id="device-mac">Loading...</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Status</span>
+                <span class="status-badge disconnected" id="status-badge">Disconnected</span>
+            </div>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <form id="proxy-form">
+            <div class="form-group">
+                <label for="proxy-host">SOCKS5 Proxy Server</label>
+                <div class="input-row">
+                    <input type="text" id="proxy-host" placeholder="proxy.example.com" required>
+                    <input type="number" id="proxy-port" placeholder="1080" required min="1" max="65535">
+                </div>
+            </div>
+
+            <div class="optional-section">
+                <div class="optional-title">Authentication (Optional)</div>
+                <div class="form-group">
+                    <label for="proxy-user">Username</label>
+                    <input type="text" id="proxy-user" placeholder="username">
+                </div>
+                <div class="form-group">
+                    <label for="proxy-pass">Password</label>
+                    <input type="password" id="proxy-pass" placeholder="password">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="connect-btn">
+                Connect
+            </button>
+        </form>
+
+        <button type="button" class="btn btn-danger hidden" id="disconnect-btn">
+            Disconnect
+        </button>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        // DOM elements
+        const deviceIP = document.getElementById('device-ip');
+        const deviceMAC = document.getElementById('device-mac');
+        const statusBadge = document.getElementById('status-badge');
+        const message = document.getElementById('message');
+        const proxyForm = document.getElementById('proxy-form');
+        const proxyHost = document.getElementById('proxy-host');
+        const proxyPort = document.getElementById('proxy-port');
+        const proxyUser = document.getElementById('proxy-user');
+        const proxyPass = document.getElementById('proxy-pass');
+        const connectBtn = document.getElementById('connect-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+
+        // Show message
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = `message ${type}`;
+            message.style.display = 'block';
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 5000);
+        }
+
+        // Update UI based on connection status
+        function updateUI(isConnected) {
+            if (isConnected) {
+                statusBadge.className = 'status-badge connected';
+                statusBadge.textContent = 'Connected';
+                proxyForm.classList.add('hidden');
+                disconnectBtn.classList.remove('hidden');
+            } else {
+                statusBadge.className = 'status-badge disconnected';
+                statusBadge.textContent = 'Disconnected';
+                proxyForm.classList.remove('hidden');
+                disconnectBtn.classList.add('hidden');
+            }
+        }
+
+        // Fetch device info on load
+        async function fetchDeviceInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/device`);
+                const data = await response.json();
+                
+                deviceIP.textContent = data.ip || 'Unknown';
+                deviceMAC.textContent = data.mac || 'Unknown';
+                
+                if (data.is_connected && data.proxy_host) {
+                    proxyHost.value = data.proxy_host;
+                    proxyPort.value = data.proxy_port;
+                    updateUI(true);
+                } else {
+                    updateUI(false);
+                }
+            } catch (error) {
+                console.error('Failed to fetch device info:', error);
+                showMessage('Failed to load device information', 'error');
+            }
+        }
+
+        // Handle connect
+        proxyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const host = proxyHost.value.trim();
+            const port = parseInt(proxyPort.value, 10);
+            const user = proxyUser.value.trim();
+            const pass = proxyPass.value;
+
+            if (!host || !port) {
+                showMessage('Please enter proxy host and port', 'error');
+                return;
+            }
+
+            connectBtn.disabled = true;
+            connectBtn.innerHTML = '<span class="loading"></span>Connecting...';
+
+            try {
+                const response = await fetch(`${API_BASE}/connect`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        proxy_host: host,
+                        proxy_port: port,
+                        proxy_user: user,
+                        proxy_pass: pass,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showMessage('Connected successfully!', 'success');
+                    updateUI(true);
+                } else {
+                    showMessage(data.error || 'Failed to connect', 'error');
+                }
+            } catch (error) {
+                console.error('Connect error:', error);
+                showMessage('Failed to connect to proxy', 'error');
+            } finally {
+                connectBtn.disabled = false;
+                connectBtn.innerHTML = 'Connect';
+            }
+        });
+
+        // Handle disconnect
+        disconnectBtn.addEventListener('click', async () => {
+            disconnectBtn.disabled = true;
+            disconnectBtn.innerHTML = '<span class="loading"></span>Disconnecting...';
+
+            try {
+                const response = await fetch(`${API_BASE}/disconnect`, {
+                    method: 'POST',
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showMessage('Disconnected from proxy', 'success');
+                    updateUI(false);
+                } else {
+                    showMessage(data.error || 'Failed to disconnect', 'error');
+                }
+            } catch (error) {
+                console.error('Disconnect error:', error);
+                showMessage('Failed to disconnect', 'error');
+            } finally {
+                disconnectBtn.disabled = false;
+                disconnectBtn.innerHTML = 'Disconnect';
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', fetchDeviceInfo);
+    </script>
+</body>
+</html>
